@@ -52,9 +52,9 @@ X_d = cl_array.to_device(queue,X_h)
 Omp_d = cl_array.to_device(queue,Omp_h)
 # print X_h
 
-# f = open("kernel.cl", "r")
-# Source = f.read()
-# prg = cl.Program(ctx, Source).build()
+f = open("kernel.cl", "r")
+Source = f.read()
+prg = cl.Program(ctx, Source).build()
 
 for t in Timeline:
     t = np.float32(t)
