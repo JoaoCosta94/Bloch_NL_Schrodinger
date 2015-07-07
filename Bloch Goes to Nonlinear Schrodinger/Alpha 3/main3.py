@@ -51,7 +51,7 @@ P33_h = (np.random.randn(M) + 1j*np.random.randn(M)).astype(np.complex64)
 P21_h = (np.random.randn(M) + 1j*np.random.randn(M)).astype(np.complex64)
 P31_h = (np.random.randn(M) + 1j*np.random.randn(M)).astype(np.complex64)
 P32_h = (np.random.randn(M) + 1j*np.random.randn(M)).astype(np.complex64)
-Omp_h = (np.random.randn(M) + 1j*np.random.randn(M)).astype(np.complex64)
+OMP_h = (np.random.randn(M) + 1j*np.random.randn(M)).astype(np.complex64)
 
 P11_d = cl_array.to_device(queue, P11_h)
 P22_d = cl_array.to_device(queue, P22_h)
@@ -59,9 +59,15 @@ P33_d = cl_array.to_device(queue, P33_h)
 P21_d = cl_array.to_device(queue, P21_h)
 P31_d = cl_array.to_device(queue, P31_h)
 P32_d = cl_array.to_device(queue, P32_h)
-Omp_d = cl_array.to_device(queue, Omp_h)
+OMP_d = cl_array.to_device(queue, OMP_h)
 
 f = open("source.cl", "r")
 source = f.read()
 f.close()
 prg = cl.Program(ctx, Source).build()
+
+for t in Timeline:
+    completeEvent = prg.RK4Step(queue, (M,), None, P11_d,  P22_d, P33_d, P21_d, P31_d, P32_d, OMP_d)
+    completeEvent.wait() 
+
+
