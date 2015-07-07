@@ -20,19 +20,29 @@ MF = cl.mem_flags
 
 # Constants 
 M = 10 # Number of atoms
-L = 1E-9 # Atom Spacing
+L = np.float32(0.000000001) # Atom Spacing
 N = 1000 # Number of time intervals
 dt = np.float32(0.01) # Time interval
 Timeline = np.arange(0.0, N, dt) 
-Po = np.float32(1.0)
+P0 = np.float32(1.0)
 Delta = np.float32(1.0)
 Gama = np.float32(1.0)
 Omc = np.float32(1.0)
 
 # acabar os defines dos valores
-text = "#define M " 
-f = open("constants.cl",'w+')
-f.write(text + str(M))
+text = "#define M " + str(M) + "\n"
+text += "#define L " + str(L) + "\n"
+text += "#define dt " + str(dt) + "\n"
+text += "#define P0 " + str(P0) + "\n"
+text += "#define Delta " + str(Delta) + "\n"
+text += "#define Gama " + str(Gama) + "\n"
+text += "#define Omc " + str(Omc) + "\n"
+f1 = open("source.cl",'w+')
+f2 = open("kernel.cl", "r")
+kernel = f2.read()
+f1.write(text + kernel)
+f2.close()
+f1.close()
 
 #Initial Conditions OmegaP is yet missing here 
 P11_h = (np.random.randn(M) + 1j*np.random.randn(M)).astype(np.complex64)
@@ -51,12 +61,7 @@ P31_d = cl_array.to_device(queue, P31_h)
 P32_d = cl_array.to_device(queue, P32_h)
 Omp_d = cl_array.to_device(queue, Omp_h)
 
-
-f = open("kernel.cl", "r")
-Source = f.read()
+f = open("source.cl", "r")
+source = f.read()
+f.close()
 prg = cl.Program(ctx, Source).build()
-
-# for t in Timeline:
-#     t = np.float32(t)
-#     completeEvent = prg.RK4Step(queue, (M,), None, t, X_d, Omp_d)
-#     completeEvent.wait()
