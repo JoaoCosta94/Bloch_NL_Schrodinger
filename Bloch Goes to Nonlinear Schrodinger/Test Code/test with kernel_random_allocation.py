@@ -18,39 +18,49 @@ P32_h = (np.random.randn(M) + 1j*np.random.randn(M)).astype(np.complex64)
 dados_h = []
 
 for i in range(3):
-      #a = np.array([P11_h[i], P22_h[i], P33_h[i], P21_h[i], P31_h[i], P32_h[i]]).astype(np.complex64)
       a = np.array([P11_h[i], P22_h[i]]).astype(np.complex64)
       dados_h.append(a)
 
-dados2_h = dados_h[:]
 dados_h = np.array(dados_h).astype(np.complex64)
-dados2_h = np.array(dados2_h).astype(np.complex64)
+k_h = np.empty_like(dados_h)
 RES_h = np.empty_like(dados_h)
 
 print "dados1"
 print dados_h
-print "\n Expected"
-print dados_h * 2
 
 dados_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=dados_h)
-dados2_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=dados2_h)
+k_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=k_h)
 RES_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf = RES_h)
 
 
 Source = """
-__kernel void soma(__global float2 *dados, __global float2 *dados2, __global float2 *res, int W){
+void f(__global float2 *dados, __global float2 *k, int id, int W)
+{ 
+    float2 q0 = dados[id*W];
+    float2 q1 = dados[id*W + 1];
+    k[id*W] = q0;
+    k[id*W+1] = q1;
+}
+
+__kernel void soma(__global float2 *dados, __global float2 *k, __global float2 *res, int W){
 	const int gid_x = get_global_id(0);
-	for(int i = 0; i<W; i++)
+	f(dados, k , gid_x, W);
+	for(int i=0; i<W; i++)
 	{
-             res[gid_x*W+i] = dados[gid_x*W+i] *2;
+            res[gid_x*W+i] = k[gid_x*W+i]*2;
 	}
 }
 """
 prg = cl.Program(ctx, Source).build()
 
-completeEvent = prg.soma(queue, (M,), None, dados_d, dados2_d, RES_d, np.int32(2))
+completeEvent = prg.soma(queue, (M,), None, dados_d, k_d, RES_d, np.int32(2))
 completeEvent.wait()
 
 cl.enqueue_copy(queue, RES_h, RES_d)
+cl.enqueue_copy(queue, k_h, k_d)
+print "\n dados - k"
+print dados_h - k_h
+print "\n Expected"
+print dados_h*2
 print "\n RES"
-print RES_h - (dados_h + dados2_h)
+print RES_h - dados_h*2
