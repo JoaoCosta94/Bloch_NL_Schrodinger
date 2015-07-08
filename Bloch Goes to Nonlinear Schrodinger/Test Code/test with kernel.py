@@ -1,9 +1,5 @@
 import pyopencl as cl
-import pyopencl.array as cl_array
 import numpy as np
-import numpy.linalg as la
-from pyopencl.elementwise import ElementwiseKernel
-import matplotlib.pyplot as plt
 
 ctx = cl.create_some_context()
 queue = cl.CommandQueue(ctx)
@@ -13,43 +9,46 @@ M = 3
 
 zero = np.complex64(0.0)
 
-X_h = np.array([1 + 1j*1, 2 + 1j*2, 3 + 1j*3]).astype(np.complex64)
-Y_h = np.array([1 + 1j*1, 2 + 1j*2, 3 + 1j*3]).astype(np.complex64)
+X1_h = np.array([1 + 1j*2, 2 + 1j*3, 3 + 1j*4]).astype(np.complex64)
+X2_h = np.array([1 + 1j*2, 2 + 1j*3, 3 + 1j*4]).astype(np.complex64)
+X3_h = np.array([1 + 1j*2, 2 + 1j*3, 3 + 1j*4]).astype(np.complex64)
+Y1_h = np.array([4 + 1j*5, 5 + 1j*6, 6 + 1j*7]).astype(np.complex64)
+Y2_h = np.array([4 + 1j*5, 5 + 1j*6, 6 + 1j*7]).astype(np.complex64)
+Y3_h = np.array([4 + 1j*5, 5 + 1j*6, 6 + 1j*7]).astype(np.complex64)
+aux_h = np.complex64(1 + 1j*1)
+RES_h = np.empty_like(X1_h)
+id_h = np.empty_like(X1_h)
+
+dados_h = []
+for i in range(3):
+      dados_h.append(np.array([X1_h[i], X2_h[i], X3_h[i], Y1_h[i], Y2_h[i], Y3_h[i]]).astype(np.complex64))
+dados_h = np.array(dados_h).astype(np.complex64)
+
+print dados_h
+
+aux_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=aux_h)
+dados_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=dados_h)
+RES_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf = RES_h)
+id_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf = id_h)
+
 
 Source = """
-#define complex_ctr(x, y) (float2)(x, y)
-#define complex_add(a, b) complex_ctr((a).x + (b).x, (a).y + (b).y)
-#define complex_mul(a, b) complex_ctr(mad(-(a).y, (b).y, (a).x * (b).x), mad((a).y, (b).x, (a).x * (b).y))
-#define complex_mul_scalar(a, b) complex_ctr((a).x * (b), (a).y * (b))
-#define complex_div_scalar(a, b) complex_ctr((a).x / (b), (a).y / (b))
-#define conj(a) complex_ctr((a).x, -(a).y)
-#define conj_transp(a) complex_ctr(-(a).y, (a).x)
-#define conj_transp_and_mul(a, b) complex_ctr(-(a).y * (b), (a).x * (b))
-#define complex_unit (float2)(0, 1)
-
-__kernel void soma(__global float4 *data), __global float2 *res){
-	const int gid = get_global_id(0);
-	res[gid].x = data[gid].s0 + data[gid].s2;  
-	res[gid].x = data[gid].s1 + data[gid].s3;  
+__kernel void soma( __global float8 *dados, __global float2 *id, __global float2 *res){
+	const int gid_x = get_global_id(0);
+	const int gid_y = get_global_id(1);
+	id[gid_x].x = gid_x;
+	id[gid_x].y = gid_y;
+	res[gid_x] = dados[gid_x];
 }
 """
 prg = cl.Program(ctx, Source).build()
 
-DATA_h = []
-for i in range(M):
-      DATA_h.append(np.array([X_h[i], Y_h[i]]))
-#       DATA_h.append(np.array([X_h[i]]))
-DATA_h = np.array(DATA_h)
-DATA_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=DATA_h)
-RES_h = np.empty_like(DATA_h)
-RES_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf = RES_h)
-
-completeEvent = prg.soma(queue, (4,), None, DATA_d, RES_d)
+completeEvent = prg.soma(queue, (M,), None, dados_d, id_d, RES_d)
 completeEvent.wait()
 
-# for i in range(M):
-#     RES_h[i] = DATA_h[i].real + DATA_h[i].imag
 cl.enqueue_copy(queue, RES_h, RES_d)
-print DATA_h
-print "GPU"
+cl.enqueue_copy(queue, id_h, id_d)
+print "GPU ID"
+print id_h
+print "GPU RES"
 print RES_h
