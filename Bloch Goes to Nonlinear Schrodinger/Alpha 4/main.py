@@ -3,6 +3,7 @@ __author__ = 'Joao Costa'
 import pyopencl as cl
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 """
 Solve the problem
@@ -23,7 +24,7 @@ queue = cl.CommandQueue(ctx)
 MF = cl.mem_flags
 
 # Constants 
-M = 10 # Number of atoms
+M = 2000 # Number of atoms
 L = np.float32(0.000000001) # Atom Spacing
 N = 1000 # Number of time intervals
 dt = np.float32(0.01) # Time interval
@@ -34,13 +35,14 @@ gama = np.float32(1.0) # constant GAMA
 omc = np.float32(1.0) # constant OMC
 
 # Writing the source code with the constants declared by the user
-text = "__constant int M=" + str(M) + "; \n"
-text += "__constant float L=" + str(L) + "; \n"
-text += "__constant float dt=" + str(dt) + "; \n"
-text += "__constant float p0=" + str(p0) + "; \n"
-text += "__constant float delta=" + str(delta) + "; \n"
-text += "__constant float gama=" + str(gama) + "; \n"
-text += "__constant float omc=" + str(omc) + "; \n"
+text = ""
+##text = "__constant int M=" + str(M) + "; \n"
+##text += "__constant float L=" + str(L) + "; \n"
+##text += "__constant float dt=" + str(dt) + "; \n"
+##text += "__constant float p0=" + str(p0) + "; \n"
+##text += "__constant float delta=" + str(delta) + "; \n"
+##text += "__constant float gama=" + str(gama) + "; \n"
+##text += "__constant float omc=" + str(omc) + "; \n"
 f1 = open("precode.cl", "r")
 f2 = open("kernel.cl", "r")
 f3 = open("source.cl",'w+')
@@ -81,9 +83,16 @@ source = f.read()
 f.close()
 prg = cl.Program(ctx, source).build()
 
+print "Begin Calculation"
+start_time = time.time()
+
 for t in Timeline:
     completeevent = prg.RK4Step(queue, (M,), None, X_d, OMP_d, K_d, Xs_d, Xm_d, W)
     completeevent.wait()
 
 cl.enqueue_copy(queue, X_h, X_d)
 cl.enqueue_copy(queue, OMP_h, OMP_d)
+
+end_time = time.time()
+print "All done"
+print "Calculation took " + str(end_time - start_time) + " seconds"
