@@ -34,13 +34,13 @@ gama = np.float32(1.0) # constant GAMA
 omc = np.float32(1.0) # constant OMC
 
 # Writing the source code with the constants declared by the user
-text = "__constant int M=" + str(M) + "\n"
-text += "__constant float L=" + str(L) + "\n"
-text += "__constant float dt=" + str(dt) + "\n"
-text += "__constant float p0=" + str(p0) + "\n"
-text += "__constant float delta=" + str(delta) + "\n"
-text += "__constant float gama=" + str(gama) + "\n"
-text += "__constant float omc=" + str(omc) + "\n"
+text = "__constant int M=" + str(M) + "; \n"
+text += "__constant float L=" + str(L) + "; \n"
+text += "__constant float dt=" + str(dt) + "; \n"
+text += "__constant float p0=" + str(p0) + "; \n"
+text += "__constant float delta=" + str(delta) + "; \n"
+text += "__constant float gama=" + str(gama) + "; \n"
+text += "__constant float omc=" + str(omc) + "; \n"
 f1 = open("precode.cl", "r")
 f2 = open("kernel.cl", "r")
 f3 = open("source.cl",'w+')
