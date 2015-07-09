@@ -1,81 +1,86 @@
-#define complex_ctr(x, y) (float2)(x, y)
-#define complex_add(a, b) complex_ctr((a).x + (b).x, (a).y + (b).y)
-#define complex_mul(a, b) complex_ctr(mad(-(a).y, (b).y, (a).x * (b).x), mad((a).y, (b).x, (a).x * (b).y))
-#define complex_mul_scalar(a, b) complex_ctr((a).x * (b), (a).y * (b))
-#define complex_div_scalar(a, b) complex_ctr((a).x / (b), (a).y / (b))
-#define conj(a) complex_ctr((a).x, -(a).y)
-#define conj_transp(a) complex_ctr(-(a).y, (a).x)
-#define conj_transp_and_mul(a, b) complex_ctr(-(a).y * (b), (a).x * (b))
-#define complex_real(a) a.x
-#define complex_imag(a) a.y
-#define complex_unit (float2)(0, 1)
-
-float16 f(float16 x, float2 omp)
-{ 
-    float16 v;
-	float2 p11, p22, p33, p21, p31, p32, aux;
-	p11 = complex_ctr(x.s0, x.s1);
-	p22 = complex_ctr(x.s2, x.s3);
-	p33 = complex_ctr(x.s4, x.s5);
-	p21 = complex_ctr(x.s6, x.s7);
-	p31 = complex_ctr(x.s8, x.s9);
-	p32 = complex_ctr(x.s10, x.s11);
-	omp = complex_mul(omp, complex_unit);
+void f(__global float2 *X, 
+       __global float2 *OMP, 
+	   __global float2 *K, 
+	   int id, 
+	   uint W){ 
+	float2 p11, p22, p33, p21, p31, p32, op, aux;
+	p11 = X[id*W];
+	p22 = X[id*W+1];
+	p33 = X[id*W+2];
+	p21 = X[id*W+3];
+	p31 = X[id*W+4];
+	p32 = X[id*W+5];
+	op = OMP[id];
+	op = complex_mul(op, complex_unit);
 	
-	aux = complex_mul_scalar(p22, Gama/2.0) + complex_mul(omp, p22) + complex_mul_scalar(conj(p22), Gama/2.0) + complex_mul(omp, conj(p22));
-	v.s0 = complex_real(aux);
-	v.s1 = complex_imag(aux);
+	aux = p22 * gama/2.0 + complex_mul(op, p22) + conj(p22) * gama/2.0 + complex_mul(op, conj(p22));
+	K[id*W] = aux;
 	
-	aux = (complex_mul_scalar(p22, -Gama) - complex_mul(omp, p21) + complex_mul_scalar(complex_mul(p32, complex_unit), Omc) 
-		   + complex_mul_scalar(conj(p22), -Gama) - complex_mul(omp, conj(p21)) + complex_mul_scalar( complex_mul(conj(p32), complex_unit), Omc));
-	v.s2 = complex_real(aux);
-	v.s3 = complex_imag(aux);
+	aux = (-p22*gama - complex_mul(op, p21) + complex_mul(p32, complex_unit)*omc 
+	      - conj(p22)*gama - complex_mul(op, conj(p21)) + complex_mul(conj(p32), complex_unit)*omc);
+	K[id*W+1] = aux;
 	
-	aux = (complex_mul_scalar(p22, Gama/2.0) - complex_mul_scalar(complex_mul(p32, complex_unit),Omc) 
-		  + complex_mul_scalar(conj(p22), Gama/2.0) - complex_mul_scalar(complex_mul(conj(p32), complex_unit)), Omc);
-	v.s4 = complex_real(aux);
-	v.s5 = complex_imag(aux);
+	aux = p22*gama/2.0 - complex_mul(p32, complex_unit)*omc + conj(p22)*gama/2.0 - complex_mul(conj(p32), complex_unit)*omc;
+	K[id*W+2] = aux;
 	
-	aux = (complex_mul(omp, p11) - complex_mul(omp, p22) + complex_mul_scalar(p21, -Gama) 
-	      + complex_mul_scalar(complex_mul(p21, complex_unit), Delta) + complex_mul_scalar(complex_mul(p31, complex_unit), Omc));	 
-	v.s6 = complex_real(aux);
-	v.s7 = complex_imag(aux);
+	aux = complex_mul(op, p11) - complex_mul(op, p22) - p21*gama) + complex_mul(p21, complex_unit)*delta + complex_mul(p31, complex_unit)*omc;	 
+	K[id*W+3] = aux;
 	
-	aux = complex_mul_scalar(complex_mul(p21, complex_unit), Omc) + complex_mul_scalar(complex_mul(p31, complex_unit), Delta) - complex_mul(omp, p32);
-	v.s8 = complex_real(aux);
-	v.s9 = complex_imag(aux);
+	aux = complex_mul(p21, complex_unit)*omc + complex_mul(p31, complex_unit)*delta - complex_mul(op, p32);
+	K[id*W+4] = aux;
 	
-	aux = (complex_mul_scalar(complex_mul(p22, complex_unit), Omc) - complex_mul_scalar(complex_mul(p33, complex_unit), Omc)
-		   -complex_mul(omp, p31) +  complex_mul_scalar(p32, -Gama));
-	v.s10 = complex_real(aux);
-	v.s11 = complex_imag(aux);
-    return v;
+	aux = (complex_mul(p22, complex_unit)*omc - omplex_mul(p33, complex_unit)*omc - complex_mul(omp, p31) - p32*gama);
+	K[id*W+5] = aux;
 }
 
-__kernel void RK4Step(__global float16 *x, __global float2 *omp){
-    const int gid = get_global_id(0);
-    float16 k, xm,xs;
+__kernel void RK4Step(__global float2 *X, 
+				      __global float2 *OMP, 
+					  __global float2 *K, 
+					  __global float2 *Xs, 
+					  __global float2 *Xm, 
+					  uint W){
+    const int gid_x = get_global_id(0);
+	int idx = 0;
 
+    //computation of k1
+    f(X, OMP, K, gid_x, W);
+	for(int i=0; i<W; i++)
+	{
+		idx = gid_x*W+i;
+		Xs[idx] = X[idx] + dt*K[idx]/6.0;
+		Xm[idx] = X[idx] + 0.5*dt*K[idx];
+	}
+    
+    //computation of k2
+    f(Xm, OMP, K, gid_x, W);
+	for(int i=0; i<W; i++)
+	{
+		idx = gid_x*W+i;
+		Xs[idx] = Xs[idx] + dt*K[idx]/3.0;
+		Xm[idx] = X[idx] + 0.5*dt*K[idx];
+	}	
 
-    //k1
-    k = f(x[gid], omp[gid]);
-    xs = x[gid] + dt * k/6.0;
-    xm = x[gid] + 0.5 * dt * k;
+    //computation of k3
+    f(Xm, OMP, K, gid_x, W);
+	for(int i=0; i<W; i++)
+	{
+		idx = gid_x*W+i;
+		Xs[idx] = Xs[idx] + dt*K[idx]/3.0;
+		Xm[idx] = X[idx] + dt*K[idx];
+	}	
 
-    //k2
-    k = f(xm, omp[gid]);
-    xs +=  dt * k/3.0;
-    xm = x[gid] + 0.5 * dt * k;
-
-    //k3
-    k = f(xm, omp[gid]);
-    xs +=  dt * k/3.0;
-    xm = x[gid] + dt * k;
-
-    //k4
-    k = f(xm, omp[gid]);
-    xs +=  dt * k/6.0;
+    //computation of k4
+    f(Xm, OMP, K, gid_x, W);
+	for(int i=0; i<W; i++)
+	{
+		idx = gid_x*W+i;
+		Xs[idx] = Xs[idx] + dt*K[idx]/6.0;
+	}
 
     //update photon
-    x[gid] = xs;
+	for(int i=0; i<W; i++)
+	{
+		idx = gid_x*W+i;
+		X[idx] = Xs[idx];
+	}
 }
