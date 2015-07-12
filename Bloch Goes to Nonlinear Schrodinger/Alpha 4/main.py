@@ -24,9 +24,9 @@ queue = cl.CommandQueue(ctx)
 MF = cl.mem_flags
 
 # Constants 
-M = 2000 # Number of atoms
+M = 1000 # Number of atoms
 L = np.float32(0.000000001) # Atom Spacing
-N = 1000 # Number of time intervals
+N = 100 # Number of time intervals
 dt = np.float32(0.01) # Time interval
 Timeline = np.arange(0.0, N, dt) 
 p0 = np.float32(1.0) # constant P0 [OMP = P0*Ai]
