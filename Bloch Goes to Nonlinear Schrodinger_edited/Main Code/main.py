@@ -27,23 +27,31 @@ MF = cl.mem_flags
 # Constants 
 M = 2000 # Number of atoms
 L = np.float32(0.000000001) # Atom Spacing
-N = 1000 # Number of time intervals
-dt = np.float32(0.1) # Time interval
-Timeline = np.arange(0.0, N, dt).astype(np.float32) 
 p0 = np.float32(1.0) # constant P0 [OMP = P0*Ai]
 delta = np.float32(1.0) # constant DELTA
 gama = np.float32(1.0) # constant GAMA
 omc = np.float32(1.0) # constant OMC
+k_p = np.float32(1.0)
+om_p = np.float32(1.0)
+v = np.float32(0.001)
+b = np.float32(1.0)
+N = 1000 # Number of time intervals
+dt = np.float32(0.1) # Time interval
+Timeline = np.arange(0.0, N, dt).astype(np.float32) 
 
 # Writing the source code with the constants declared by the user
 text = ""
-##text = "__constant int M=" + str(M) + "; \n"
-##text += "__constant float L=" + str(L) + "; \n"
-##text += "__constant float dt=" + str(dt) + "; \n"
-##text += "__constant float p0=" + str(p0) + "; \n"
-##text += "__constant float delta=" + str(delta) + "; \n"
-##text += "__constant float gama=" + str(gama) + "; \n"
-##text += "__constant float omc=" + str(omc) + "; \n"
+text = "constant int M=" + str(M) + "; \n"
+text += "constant float L=" + str(L) + "; \n"
+text += "constant float p0=" + str(p0) + "; \n"
+text += "constant float delta=" + str(delta) + "; \n"
+text += "constant float gama=" + str(gama) + "; \n"
+text += "constant float omc=" + str(omc) + "; \n"
+text += "constant float k_p=" + str(k_p) + "; \n"
+text += "constant float om_p=" + str(om_p) + "; \n"
+text += "constant float v=" + str(v) + "; \n"
+text += "constant float b=" + str(b) + "; \n"
+text += "constant float dt=" + str(dt) + "; \n"
 f1 = open("precode.cl", "r")
 f2 = open("kernel.cl", "r")
 f3 = open("source.cl",'w+')
@@ -75,9 +83,9 @@ Xs_h = np.empty_like(X_h)
 Xm_h = np.empty_like(X_h)
 
 A_h = X_h[:,6]
-figure(1)
-plt.plot(np.real(A_h))
-plt.plot(np.abs(A_h))
+##figure(1)
+##plt.plot(np.real(A_h))
+##plt.plot(np.abs(A_h))
 
 # Allocation of required buffers on the device
 X_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=X_h)
@@ -103,7 +111,7 @@ print "All done"
 print "Calculation took " + str(end_time - start_time) + " seconds"
 
 A_h = X_h[:,6]
-figure(2)
-plt.plot(np.real(A_h))
-plt.plot(np.abs(A_h))
+##figure(2)
+##plt.plot(np.real(A_h))
+##plt.plot(np.abs(A_h))
 ##plt.show()

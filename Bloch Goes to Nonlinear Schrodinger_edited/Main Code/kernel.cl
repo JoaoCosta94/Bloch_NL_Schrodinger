@@ -1,14 +1,3 @@
-constant int M=10; 
-constant float L=1e-09; 
-constant float p0=1.0; 
-constant float delta=1.0; 
-constant float gama=1.0; 
-constant float omc=1.0;  
-constant float k_p=1.0; 
-constant float om_p=1.0;
-constant float v = 0.001; 
-constant float b = 1.0;
-constant float dt=0.01; 
 
 void f(__global float2 *X,  
 	   __global float2 *K, 
@@ -48,7 +37,7 @@ void f(__global float2 *X,
 	
 	exp_arg = k_p * L * id - om_p * t;
 	p = complex_mul(b*p0*p21*complex_ctr(cos(exp_arg), sin(exp_arg)), complex_unit);
-	aux = (X[(id-1)*W+6] + X[(id+1)*W+6]);
+	//aux = complex_mul(v *(ar + al), complex_unit);
 	aux = aux + p;
 	K[id*W+6] = aux;
 }
