@@ -2,7 +2,6 @@ __author__ = 'Joao Costa'
 
 import pyopencl as cl
 import numpy as np
-from pylab import *
 import matplotlib.pyplot as plt
 import time
 
@@ -29,7 +28,7 @@ M = 2000 # Number of atoms
 L = np.float32(0.000000001) # Atom Spacing
 N = 1000 # Number of time intervals
 dt = np.float32(0.1) # Time interval
-Timeline = np.arange(0.0, N, dt).astype(np.float32) 
+Timeline = np.arange(0.0, N, dt) .astype(np.float32)
 p0 = np.float32(1.0) # constant P0 [OMP = P0*Ai]
 delta = np.float32(1.0) # constant DELTA
 gama = np.float32(1.0) # constant GAMA
@@ -37,15 +36,15 @@ omc = np.float32(1.0) # constant OMC
 
 # Writing the source code with the constants declared by the user
 text = ""
-##text = "__constant int M=" + str(M) + "; \n"
-##text += "__constant float L=" + str(L) + "; \n"
-##text += "__constant float dt=" + str(dt) + "; \n"
-##text += "__constant float p0=" + str(p0) + "; \n"
-##text += "__constant float delta=" + str(delta) + "; \n"
-##text += "__constant float gama=" + str(gama) + "; \n"
-##text += "__constant float omc=" + str(omc) + "; \n"
+##text = "constant int M=" + str(M) + "; \n"
+##text += "constant float L=" + str(L) + "; \n"
+##text += "constant float dt=" + str(dt) + "; \n"
+##text += "constant float p0=" + str(p0) + "; \n"
+##text += "constant float delta=" + str(delta) + "; \n"
+##text += "constant float gama=" + str(gama) + "; \n"
+##text += "constant float omc=" + str(omc) + "; \n"
 f1 = open("precode.cl", "r")
-f2 = open("kernel.cl", "r")
+f2 = open("kernel_2.cl", "r")
 f3 = open("source.cl",'w+')
 precode = f1.read()
 kernel = f2.read()
@@ -74,11 +73,6 @@ K_h = np.empty_like(X_h)
 Xs_h = np.empty_like(X_h)
 Xm_h = np.empty_like(X_h)
 
-A_h = X_h[:,6]
-figure(1)
-plt.plot(np.real(A_h))
-plt.plot(np.abs(A_h))
-
 # Allocation of required buffers on the device
 X_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=X_h)
 K_d = cl.Buffer(ctx, MF.READ_WRITE | MF.COPY_HOST_PTR, hostbuf=K_h)
@@ -94,16 +88,16 @@ print "Begin Calculation"
 start_time = time.time()
 
 for t in Timeline:
+    print t
     completeevent = prg.RK4Step(queue, (M,), None, X_d, K_d, Xs_d, Xm_d, W, t)
     completeevent.wait()
-
+    
 cl.enqueue_copy(queue, X_h, X_d)
 end_time = time.time()
 print "All done"
 print "Calculation took " + str(end_time - start_time) + " seconds"
 
 A_h = X_h[:,6]
-figure(2)
 plt.plot(np.real(A_h))
 plt.plot(np.abs(A_h))
-##plt.show()
+plt.show()
